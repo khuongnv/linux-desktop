@@ -1,0 +1,25 @@
+#!/bin/bash
+# Thêm mục "Ubuntu (TTY)" vào menu GRUB (recovery/console) — chạy khi update-grub
+
+# Lấy partition root và kernel hiện tại
+ROOT_SOURCE=$(findmnt / -n -o SOURCE 2>/dev/null)
+[ -z "$ROOT_SOURCE" ] && exit 0
+ROOT_UUID=$(blkid -s UUID -o value "$ROOT_SOURCE" 2>/dev/null)
+[ -z "$ROOT_UUID" ] && exit 0
+VERSION=$(uname -r)
+[ ! -f "/boot/vmlinuz-$VERSION" ] && exit 0
+[ ! -f "/boot/initrd.img-$VERSION" ] && exit 0
+
+cat << EOF
+menuentry 'Ubuntu (TTY)' --class gnu-linux --class gnu --class os {
+	recordfail
+	load_video
+	insmod gzio
+	insmod part_gpt
+	insmod part_msdos
+	insmod ext2
+	search --no-floppy --fs-uuid --set=root $ROOT_UUID
+	linux /boot/vmlinuz-$VERSION root=UUID=$ROOT_UUID recovery
+	initrd /boot/initrd.img-$VERSION
+}
+EOF
